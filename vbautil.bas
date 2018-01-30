@@ -1,6 +1,31 @@
 Attribute VB_Name = "array_"
 Option Explicit
 
+'Wrap string in quotes
+'---------------------
+Function quote(str As String)
+    quote = """" & str & """"
+End Function
+
+'True/false if array is empty
+'----------------------------
+Function emptyArr(arr As Variant) As Boolean
+    If LBound(arr) > UBound(arr) Then
+        emptyArr = True
+    Else
+        emptyArr = False
+    End If
+End Function
+
+'Print out array values in immediate window
+'Note: array may contain only simple values (no objects or other arrays)
+Function printArr(arr As Variant)
+    Dim i As Long
+    For i = LBound(arr) To UBound(arr)
+        Debug.Print arr(i)
+    Next i
+End Function
+
 'Get length of an array
 '----------------------
 Function countArr(arr As Variant) As Long
@@ -92,48 +117,51 @@ Function slice( _
     If IsMissing(endIndex) Then
         endIndex = length(param)
     ElseIf endIndex < 0 Then
-        endIndex = length(param) - 1 + endIndex
+        endIndex = length(param) + endIndex
     End If
     
+    'Length of output
+    Dim l As Long
+    l = endIndex - startIndex
+    
+    'endIndex is excluded
+    endIndex = endIndex - 1
+    
+    'Get result
     Dim result As Variant
     Dim i As Long
     
-    If IsArray(param) = True Then
-        If startIndex <= endIndex Then
-            'Adjust to array bounds
-            startIndex = startIndex + LBound(param)
-            endIndex = endIndex + LBound(param)
-              
-            Dim j As Long
-            j = LBound(param)
-            ReDim result(j To endIndex - 1 - startIndex) As Variant
-            For i = startIndex To endIndex - 1
-                result(j) = param(i)
-                j = j + 1
-            Next i
-        Else
-            'Return an empty array
-            ReDim result(0 To -1)
-        End If
-        'Return subset
+    If IsArray(param) Then
+        'Rebase to array bounds
+        startIndex = startIndex + LBound(param)
+        endIndex = endIndex + LBound(param)
+        Dim j As Long
+        j = LBound(param) 'preserve input base
+        ReDim result(j To j + l - 1) As Variant
+        For i = startIndex To endIndex
+            result(j) = param(i)
+            j = j + 1
+        Next i
         slice = result
+    ElseIf TypeName(param) = "String" Then
+        'Rebase to 1
+        startIndex = startIndex + 1
+        endIndex = endIndex + 1
+        If startIndex <= endIndex Then
+            slice = Mid(param, startIndex, 1)
+        Else
+            slice = ""
+        End If
     ElseIf TypeName(param) = "Collection" Then
+        'Rebase to 1
+        startIndex = startIndex + 1
+        endIndex = endIndex + 1
         For i = param.Count To 1 Step -1
             If i < startIndex Or i > endIndex Then
                 param.Remove i
             End If
         Next i
-        
         slice = param
-    ElseIf TypeName(param) = "String" Then
-        result = ""
-        
-        If startIndex <= endIndex Then
-            result = Mid(param, startIndex + 1, endIndex)
-        End If
-        
-        'Return subset
-        slice = result
     Else
         Err.Raise 13
     End If
